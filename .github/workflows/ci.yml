@@ -1,1 +1,60 @@
+name: CI Pipeline - Lint & Test
 
+# Pipeline  trigger  events
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+# Jobs 
+jobs:
+  code-quality:
+    name: Lint & Code Style Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm' # package-lock.json cache 
+
+      - name: Install Dependencies
+        run: npm ci # Clean, reproducible install 
+
+      - name: Run Linter
+        run: npm run lint
+
+  unit-tests:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    # Linting  test run 
+    needs: code-quality
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Execute Tests with Coverage
+        run: npm test -- --coverage
+
+      - name: Upload Test Coverage Artifacts
+        uses: actions/upload-artifact@v4
+        if: always() # Tests fail
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
